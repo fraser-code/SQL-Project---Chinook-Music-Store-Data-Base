@@ -1,0 +1,56 @@
+/* Which artists make up the top 10 contributors to the total revenue, and how much has each one contributed? */
+
+SELECT Artist.Name AS artist_name, SUM(InvoiceLine.UnitPrice*InvoiceLine.Quantity) sales_per_artist
+FROM Track
+JOIN Album ON Album.AlbumId = Track.AlbumId
+JOIN Artist On Artist.ArtistId = Album.ArtistId
+JOIN InvoiceLine ON InvoiceLine.TrackId = Track.TrackId
+JOIN Invoice ON Invoice.InvoiceId = InvoiceLine.InvoiceId
+GROUP BY Artist.Name
+ORDER BY sales_per_artist DESC
+LIMIT 10;
+
+
+
+/* Which albums hold the 10 most sold songs? */
+
+SELECT Album.Title AS album_title, Track.Name AS song_name, Artist.Name AS artist_name, SUM(InvoiceLine.Quantity) AS total_qty
+FROM Track
+JOIN Album ON Album.AlbumId = Track.AlbumId
+JOIN Artist On Artist.ArtistId = Album.ArtistId
+JOIN InvoiceLine ON InvoiceLine.TrackId = Track.TrackId
+JOIN Invoice ON Invoice.InvoiceId = InvoiceLine.InvoiceId
+GROUP BY Track.Name
+ORDER BY total_qty DESC
+LIMIT 10;
+
+
+
+/* Which Genre has sold the most copies? */
+
+SELECT Genre.Name AS genre, SUM(InvoiceLine.Quantity) AS qty_sold
+FROM Track
+JOIN Album ON Album.AlbumId = Track.AlbumId
+JOIN InvoiceLine ON InvoiceLine.TrackId = Track.TrackId
+JOIN Genre ON Track.GenreId = Genre.GenreId
+GROUP BY Genre.Name
+ORDER BY qty_sold DESC
+LIMIT 15;
+
+SELECT Genre.Name AS genre, COUNT(Genre.Name) AS songs_in_genre
+FROM Track
+JOIN Genre ON Genre.GenreId = Track.GenreId
+GROUP BY genre
+ORDER BY songs_in_genre DESC
+LIMIT 15;
+
+
+
+/* Which artists have the highest number of albums? */
+
+SELECT Artist.Name AS artist_name, COUNT(Album.AlbumId) AS album_count
+FROM Album
+JOIN Artist ON Artist.ArtistId = Album.ArtistId
+GROUP BY Artist.Name
+ORDER BY album_count DESC
+LIMIT 10;

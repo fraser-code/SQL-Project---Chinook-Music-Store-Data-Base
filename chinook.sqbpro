@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="chinook DB.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="3954"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="Album" custom_title="0" dock_id="1" table="4,5:mainAlbum"/><dock_state state="000000ff00000000fd00000001000000020000000000000000fc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000011e00ffffff000000000000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="Album" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="56"/><column index="2" value="300"/><column index="3" value="54"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1*">/* Which artists make up the top 10 contributors to the total revenue, and how much has each one contributed? */
+
+SELECT Artist.Name AS artist_name, SUM(InvoiceLine.UnitPrice*InvoiceLine.Quantity) sales_per_artist
+FROM Track
+JOIN Album ON Album.AlbumId = Track.AlbumId
+JOIN Artist On Artist.ArtistId = Album.ArtistId
+JOIN InvoiceLine ON InvoiceLine.TrackId = Track.TrackId
+JOIN Invoice ON Invoice.InvoiceId = InvoiceLine.InvoiceId
+GROUP BY Artist.Name
+ORDER BY sales_per_artist DESC
+LIMIT 10;
+
+
+
+/* Which albums hold the 10 most sold songs? */
+
+SELECT Album.Title AS album_title, Track.Name AS song_name, Artist.Name AS artist_name, SUM(InvoiceLine.Quantity) AS total_qty
+FROM Track
+JOIN Album ON Album.AlbumId = Track.AlbumId
+JOIN Artist On Artist.ArtistId = Album.ArtistId
+JOIN InvoiceLine ON InvoiceLine.TrackId = Track.TrackId
+JOIN Invoice ON Invoice.InvoiceId = InvoiceLine.InvoiceId
+GROUP BY Track.Name
+ORDER BY total_qty DESC
+LIMIT 10;
+
+
+
+/* Which Genre has sold the most copies? */
+
+WITH GenreSales AS (
+    SELECT 
+        g.Name AS genre,
+        SUM(il.Quantity) AS qty_sold
+    FROM Genre g
+    JOIN Track t ON g.GenreId = t.GenreId
+    JOIN InvoiceLine il ON t.TrackId = il.TrackId
+    GROUP BY g.Name
+),
+GenreSongs AS (
+    SELECT 
+        g.Name AS genre,
+        COUNT(t.TrackId) AS songs_in_genre
+    FROM Genre g
+    JOIN Track t ON g.GenreId = t.GenreId
+    GROUP BY g.Name
+)
+SELECT 
+    gs.genre,
+    gs.qty_sold,
+    gs2.songs_in_genre
+FROM GenreSales gs
+JOIN GenreSongs gs2 ON gs.genre = gs2.genre
+ORDER BY gs.qty_sold DESC
+LIMIT 15;
+
+
+
+/* Which artists have the highest number of albums? */
+
+SELECT Artist.Name AS artist_name, COUNT(Album.AlbumId) AS album_count
+FROM Album
+JOIN Artist ON Artist.ArtistId = Album.ArtistId
+GROUP BY Artist.Name
+ORDER BY album_count DESC
+LIMIT 10;
+
+
+/* Which are the top 3 selling artist for each genre? */
+
+WITH ArtistGenreSales AS (
+    SELECT 
+        g.Name AS GenreName,
+        ar.Name AS ArtistName,
+        SUM(il.Quantity) AS TotalQuantitySold
+    FROM Genre g
+    JOIN Track t ON g.GenreId = t.GenreId
+    JOIN Album al ON t.AlbumId = al.AlbumId
+    JOIN Artist ar ON al.ArtistId = ar.ArtistId
+    JOIN InvoiceLine il ON t.TrackId = il.TrackId
+    GROUP BY g.Name, ar.Name
+),
+RankedArtists AS (
+    SELECT 
+        GenreName,
+        ArtistName,
+        TotalQuantitySold,
+        RANK() OVER (PARTITION BY GenreName ORDER BY TotalQuantitySold DESC) AS Rank
+    FROM ArtistGenreSales
+),
+TotalSalesPerGenre AS (
+    SELECT 
+        GenreName,
+        SUM(TotalQuantitySold) AS GenreTotalSales
+    FROM RankedArtists
+    GROUP BY GenreName
+)
+
+SELECT 
+    ra.GenreName,
+    ra.ArtistName,
+    ra.TotalQuantitySold,
+    ra.Rank
+FROM RankedArtists ra
+JOIN TotalSalesPerGenre tspg ON ra.GenreName = tspg.GenreName
+WHERE ra.Rank &lt;= 2
+ORDER BY tspg.GenreTotalSales DESC, ra.Rank;</sql><current_tab id="0"/></tab_sql></sqlb_project>
